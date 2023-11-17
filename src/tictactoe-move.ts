@@ -1,6 +1,6 @@
 import { Bool, Field, Poseidon, SelfProof, Struct, ZkProgram } from 'o1js';
 
-class TicTacToePublicOutput extends Struct({
+export class TicTacToePublicOutput extends Struct({
     alicePlayerId: Field,
     bobPlayerId: Field,
     gameId: Field,        
