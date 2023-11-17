@@ -1,4 +1,4 @@
-import { Bool, Cache, Field, Poseidon, Proof, SelfProof, Struct, VerificationKey, ZkProgram } from 'o1js';
+import { Cache, Field, Poseidon } from 'o1js';
 import { TicTacToeMove } from "./tictactoe-move";
 
 describe('tictactoe-move', () => {
