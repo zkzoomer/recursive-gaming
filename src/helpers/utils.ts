@@ -1,4 +1,74 @@
-import { Field } from "o1js";
+import { Bool, Field, Poseidon, Provable, SelfProof, Struct, ZkProgram } from 'o1js';
+
+function Optional<T>(type: Provable<T>) {
+    return class Optional_ extends Struct({ isSome: Bool, value: type }) {
+        constructor(isSome: boolean | Bool, value: T) {
+            super({ isSome: Bool(isSome), value });
+        }
+    
+        toFields() {
+            return Optional_.toFields(this);
+        }
+    };
+};
+  
+class OptionalBool extends Optional(Bool) {}
+
+export class Board {
+    board: OptionalBool[][];
+  
+    constructor(serializedBoard: Field) {
+        const bits = serializedBoard.toBits(18);
+        let board = [];
+
+        for (let i = 0; i < 3; i++) {
+            let row = [];
+
+            for (let j = 0; j < 3; j++) {
+                const isPlayed = bits[i * 3 + j];
+                const player = bits[i * 3 + j + 9];
+                row.push(new OptionalBool(isPlayed, player));
+            };
+
+            board.push(row);
+        };
+
+        this.board = board;
+    }
+  
+    serialize(): Field {
+        let isPlayed = [];
+        let player = [];
+
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                isPlayed.push(this.board[i][j].isSome);
+                player.push(this.board[i][j].value);
+            };
+        };
+
+        return Field.fromBits(isPlayed.concat(player));
+    };
+  
+    update(x: Field, y: Field, playerToken: Bool) {
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                // is this the cell the player wants to play?
+                const toUpdate = x.equals(new Field(i)).and(y.equals(new Field(j)));
+        
+                // make sure we can play there
+                toUpdate.and(this.board[i][j].isSome).assertEquals(false);
+        
+                // copy the board (or update if this is the cell the player wants to play)
+                this.board[i][j] = Provable.if(
+                    toUpdate,
+                    new OptionalBool(true, playerToken),
+                    this.board[i][j]
+                );
+            };
+        };
+    };
+};
 
 const emptyBoard = [9, 9, 9, 9, 9, 9, 9, 9, 9];
 const N = emptyBoard.length;  // Number of squares of the board
