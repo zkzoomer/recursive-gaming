@@ -7,7 +7,7 @@ export class TicTacToePublicOutput extends Struct({
     isTurnA: Bool,              // Whether it is A's next turn (true) or B's next turn (false) to play
     boardState: Field,          // Current state of the board encoded as a field element
 }) {};
-  
+
 export const TicTacToeMove = ZkProgram({
     name: "tic-tac-toe-move",
     publicOutput: TicTacToePublicOutput,
@@ -58,6 +58,9 @@ export const TicTacToeMove = ZkProgram({
                 let isTurnA = previousProof.publicOutput.isTurnA.not();
 
                 // Board state update -- TODO
+                // compute state transition as:
+                // stateTransition = previousProof.publicOutput.boardState * 10 ** N + newBoardState
+                // check that stateTransition is in lookup table
                 newBoardState.assertEquals(previousProof.publicOutput.boardState);
 
                 return { alicePlayerId, bobPlayerId, gameId, isTurnA, boardState: newBoardState };
@@ -65,3 +68,5 @@ export const TicTacToeMove = ZkProgram({
         },
     },
 });
+
+export class TicTacToeMoveProof extends ZkProgram.Proof(TicTacToeMove) { }
