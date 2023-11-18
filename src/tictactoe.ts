@@ -34,14 +34,16 @@ export class TicTacToe extends SmartContract {
 		// Define lookup tables for win and draw states
 		({ winningBoards: this.winningBoards, drawBoards: this.drawBoards } = generateTables());
 
-		let winningBoardsIndices = Array.from({length: this.winningBoards.length}, (_, i) => Field(i));
-		let drawBoardsIndices = Array.from({length: this.drawBoards.length}, (_, i) => Field(i));
+		//let winningBoardsIndices = Array.from({length: this.winningBoards.length}, (_, i) => Field(i));
+		//let drawBoardsIndices = Array.from({length: this.drawBoards.length}, (_, i) => Field(i));
 
 		if(Provable.inProver()) {
 			// Lookup table containing all possible win states
-			Gates.addFixedLookupTable(1, winningBoardsIndices, this.winningBoards);
+			//Gates.addFixedLookupTable(1, winningBoardsIndices, this.winningBoards);
+			Gates.addFixedLookupTable(1, [Field(0), Field(1), Field(2)], [Field(37455), Field(37467), Field(37483)])
 			// Lookup table containing all possible draw states
-			Gates.addFixedLookupTable(1, drawBoardsIndices, this.drawBoards);
+			//Gates.addFixedLookupTable(1, drawBoardsIndices, this.drawBoards);
+			Gates.addFixedLookupTable(2, [Field(0), Field(1), Field(2)], [Field(93183), Field(117759), Field(203775)])
 		};
     };
   
@@ -65,13 +67,12 @@ export class TicTacToe extends SmartContract {
 		this.gameOngoing.set(Bool(true));
     };
 
-    @method winFinish(gameProof: TicTacToeMoveProof, winnerGamerId: Field) {
+    @method winFinish(gameProof: TicTacToeMoveProof, lookupIndex: Field, winnerGamerId: Field) {
 		// Verify the game proof corresponds to the defined onchain game
 		let { alicePlayerId, bobPlayerId, gameId } = this._verifyGameProof(gameProof);
 
 		// New board state is in the list of winning positions
-		let index = this.winningBoards.findIndex(gameProof.publicOutput.boardState as any);
-		Gates.lookup(Field(1), Field(index), gameProof.publicOutput.boardState);
+		Gates.lookup(Field(1), lookupIndex, gameProof.publicOutput.boardState);
 		
 		// Getting the winner player ID from the verified last move proof
 		// proofWinnerPlayerId === bobPlayerId + proofWinner * (alicePlayerId - bobPlayerId)
@@ -88,13 +89,12 @@ export class TicTacToe extends SmartContract {
 		this.gameOngoing.set(Bool(false));
     };
 
-	@method drawFinish(gameProof: TicTacToeMoveProof) {
+	@method drawFinish(gameProof: TicTacToeMoveProof, lookupIndex: Field) {
 		// Verify the game proof corresponds to the defined onchain game
 		this._verifyGameProof(gameProof);
 
 		// New board state is in the list of draw positions
-		let index = this.drawBoards.findIndex(gameProof.publicOutput.boardState as any);
-		Gates.lookup(Field(1), Field(index), gameProof.publicOutput.boardState);
+		Gates.lookup(Field(1), lookupIndex, gameProof.publicOutput.boardState);
 
 		// Ends the game--can immediately be restarted
 		this.gameOngoing.set(Bool(false));

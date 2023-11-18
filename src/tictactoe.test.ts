@@ -6,9 +6,25 @@ import {
     PublicKey,
     Mina,
     AccountUpdate,
-    Signature,
     Poseidon,
 } from 'o1js';
+import { TicTacToeMove, TicTacToeMoveProof, TicTacToePublicOutput } from './tictactoeMove';
+import { dummyBase64Proof } from 'o1js/dist/node/lib/proof_system';
+import { Pickles } from 'o1js/dist/node/snarky';
+import { Board, generateTables } from './helpers';
+
+async function mockProof(
+    publicOutput: TicTacToePublicOutput
+  ): Promise<TicTacToeMoveProof> {
+    const [, proof] = Pickles.proofOfBase64(await dummyBase64Proof(), 2);
+
+    return new TicTacToeMoveProof({
+        proof: proof,
+        maxProofsVerified: 2,
+        publicInput: undefined,
+        publicOutput,
+    });
+}
 
 describe('tictactoe', () => {
     let gameId: Field,
@@ -24,7 +40,9 @@ describe('tictactoe', () => {
         bobPlayerId: Field,
         zkApp: TicTacToe,
         zkAppAddress: PublicKey,
-        zkAppPrivateKey: PrivateKey;
+        zkAppPrivateKey: PrivateKey,
+        stringifiedWinningBoards: string[],
+        stringifiedDrawBoards: string[];
 
     async function startGame() {
         const txn = await Mina.transaction(alice, () => {
@@ -50,10 +68,12 @@ describe('tictactoe', () => {
         // The player ID is specific to every game
         alicePlayerId = Poseidon.hash([aliceGamerId, gameId]);
         bobPlayerId = Poseidon.hash([bobGamerId, gameId]);
+
+        ({ stringifiedWinningBoards, stringifiedDrawBoards } = generateTables());
     });
 
     beforeEach(async () => {
-        let Local = Mina.LocalBlockchain({ proofsEnabled: false });
+        let Local = Mina.LocalBlockchain({ proofsEnabled: true });
         Mina.setActiveInstance(Local);
 
         [
@@ -65,6 +85,11 @@ describe('tictactoe', () => {
         zkAppAddress = zkAppPrivateKey.toPublicKey();
 
         zkApp = new TicTacToe(zkAppAddress);
+
+        await TicTacToeMove.compile()
+        console.log(TicTacToe.analyzeMethods())
+        await TicTacToe.compile()
+        console.log('here')
 
         const txn = await Mina.transaction(alice, () => {
             AccountUpdate.fundNewAccount(alice);
@@ -102,19 +127,88 @@ describe('tictactoe', () => {
             await startGame();
         });
 
-        it('Reverts when providing an invalid game proof', async () => {
-            // TODO
-            expect(true).toEqual(false);
-        });
-
         it('Reverts when the `newBoardState` is not in the list of winning positions', async () => {
-            // TODO
-            expect(true).toEqual(false);
+            const boardState = (new Board(Field(0))).serialize();
+
+            const publicOutput = new TicTacToePublicOutput(
+                {alicePlayerId, bobPlayerId, gameId, isTurnA: Bool(false), boardState}
+            );
+            const proof = await mockProof(publicOutput);
+
+            await expect(async () => {
+                zkApp.winFinish(proof, Field(0), aliceGamerId);
+            }).rejects.toThrow();
         });
 
         it('Sets the `winnerGamerId` to be that of the winner of the game', async () => {
-            // TODO
-            expect(true).toEqual(false);
+            const boardState = (new Board(Field(37455))).serialize();
+            const lookupIndex = Field(stringifiedWinningBoards.indexOf(boardState.toString()));
+            console.log(stringifiedWinningBoards.indexOf(boardState.toString()))
+            console.log(lookupIndex)
+
+            const publicOutput = new TicTacToePublicOutput(
+                {alicePlayerId, bobPlayerId, gameId, isTurnA: Bool(false), boardState}
+            );
+            const proof = await mockProof(publicOutput);
+
+            const txn = await Mina.transaction(alice, () => {
+                alice;
+                zkApp.drawFinish(proof, lookupIndex);
+            });
+
+            await txn.prove();
+            await txn.sign([aliceKey]).send();
+
+            const winnerGamerId = zkApp.winnerGamerId.get();
+            expect(winnerGamerId).toEqual(aliceGamerId);
+
+            const gameOngoing = zkApp.gameOngoing.get();
+            expect(gameOngoing).toEqual(Bool(false));
+        });
+    });
+
+    describe('drawFinish', () => {
+        beforeEach(async () => {
+            await startGame();
+        });
+
+        it('Reverts when the `newBoardState` is not in the list of winning positions', async () => {
+            const boardState = (new Board(Field(93183))).serialize();
+
+            const publicOutput = new TicTacToePublicOutput(
+                {alicePlayerId, bobPlayerId, gameId, isTurnA: Bool(false), boardState}
+            );
+            const proof = await mockProof(publicOutput);
+
+            await expect(async () => {
+                zkApp.drawFinish(proof, Field(0));
+            }).rejects.toThrow();
+        });
+
+        it('Draws the game', async () => {
+            const boardState = (new Board(Field(93183))).serialize();
+            const lookupIndex = Field(stringifiedDrawBoards.indexOf(boardState.toString()));
+            console.log(stringifiedDrawBoards.indexOf(boardState.toString()))
+            console.log(lookupIndex)
+
+            const publicOutput = new TicTacToePublicOutput(
+                {alicePlayerId, bobPlayerId, gameId, isTurnA: Bool(false), boardState}
+            );
+            const proof = await mockProof(publicOutput);
+
+            const txn = await Mina.transaction(alice, () => {
+                alice;
+                zkApp.drawFinish(proof, lookupIndex);
+            });
+
+            await txn.prove();
+            await txn.sign([aliceKey]).send();
+
+            const winnerGamerId = zkApp.winnerGamerId.get();
+            expect(winnerGamerId).toEqual(Field(0));
+
+            const gameOngoing = zkApp.gameOngoing.get();
+            expect(gameOngoing).toEqual(Bool(false));
         });
     });
 
@@ -313,5 +407,5 @@ describe('tictactoe', () => {
 
             await startGame();
         });
-    })
+    });
 });
