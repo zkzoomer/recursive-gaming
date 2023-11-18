@@ -1,5 +1,6 @@
 import { Cache, Field, Poseidon } from 'o1js';
 import { TicTacToeMove } from "./tictactoe-move";
+import { boardToField, emptyBoard } from './helpers';
 
 describe('tictactoe-move', () => {
     let gameId: Field,
@@ -9,7 +10,12 @@ describe('tictactoe-move', () => {
         bobSecret: Field,
         bobGamerId: Field,
         bobPlayerId: Field,
-        boardState: Field
+        baseBoard: Field,
+        move1Board: Field,
+        move2Board: Field,
+        move3Board: Field,
+        invalidMove1Board: Field,
+        invalidMove2Board: Field;
 
     beforeAll(async () => {
         const cache: Cache = Cache.FileSystem('./cache')
@@ -30,7 +36,16 @@ describe('tictactoe-move', () => {
         bobPlayerId = Poseidon.hash([bobGamerId, gameId]);
 
         // The board will start on the empty state
-        boardState = Field(0);
+        baseBoard = boardToField(emptyBoard);
+
+        // Board states for each move
+        move1Board = boardToField([9, 9, 9, 9, 1, 9, 9, 9, 9]);
+        move2Board = boardToField([9, 9, 9, 2, 1, 9, 9, 9, 9]);
+        move3Board = boardToField([9, 9, 9, 2, 1, 9, 9, 9, 1]);
+
+        // Invalid board states--not part of the lookup table
+        invalidMove1Board = boardToField([9, 9, 9, 1, 1, 1, 9, 9, 9])
+        invalidMove2Board = boardToField([9, 9, 9, 9, 2, 9, 9, 9, 9]);
     });
 
     // Only valid turns are allowed: A -> B -> A -> B
@@ -49,12 +64,12 @@ describe('tictactoe-move', () => {
             });
 
             it('Generates a first move proof for Alice', async () => {
-                move1Proof = await TicTacToeMove.move(aliceSecret, boardState, baseProof);
+                move1Proof = await TicTacToeMove.move(aliceSecret, Field(1), Field(1), baseProof);
             });
 
             it('Does not generate a first move proof for Bob', async () => {
                 await expect(async () => {
-                    await TicTacToeMove.move(bobSecret, boardState, baseProof);
+                    await TicTacToeMove.move(bobSecret,  Field(1), Field(1), baseProof);
                 }).rejects.toThrow();
             });
         });
@@ -65,16 +80,16 @@ describe('tictactoe-move', () => {
             
             beforeAll(async () => {
                 baseProof = await TicTacToeMove.startGame(aliceGamerId, bobGamerId, gameId);
-                move1Proof = await TicTacToeMove.move(aliceSecret, boardState, baseProof);
+                move1Proof = await TicTacToeMove.move(aliceSecret,  Field(1), Field(1), baseProof);
             });
 
             it('Generates a second move proof for Bob', async () => {
-                move2Proof = await TicTacToeMove.move(bobSecret, boardState, move1Proof);
+                move2Proof = await TicTacToeMove.move(bobSecret, Field(0), Field(1), move1Proof);
             });
 
             it('Does not generate a first move proof for Alice', async () => {
                 await expect(async () => {
-                    await TicTacToeMove.move(aliceSecret, boardState, move1Proof);
+                    await TicTacToeMove.move(aliceSecret, Field(0), Field(1), move1Proof);
                 }).rejects.toThrow();
             });
         });
@@ -88,17 +103,17 @@ describe('tictactoe-move', () => {
             
             beforeAll(async () => {
                 baseProof = await TicTacToeMove.startGame(aliceGamerId, bobGamerId, gameId);
-                move1Proof = await TicTacToeMove.move(aliceSecret, boardState, baseProof);
-                move2Proof = await TicTacToeMove.move(bobSecret, boardState, move1Proof);
+                move1Proof = await TicTacToeMove.move(aliceSecret, Field(1), Field(1), baseProof);
+                move2Proof = await TicTacToeMove.move(bobSecret, Field(0), Field(1), move1Proof);
             });
 
             it('Generates a third move proof for Alice', async () => {
-                move3Proof = await TicTacToeMove.move(aliceSecret, boardState, move2Proof);
+                move3Proof = await TicTacToeMove.move(aliceSecret, Field(2), Field(2), move2Proof);
             });
 
             it('Does not generate a third move proof for Bob', async () => {
                 await expect(async () => {
-                    await TicTacToeMove.move(bobSecret, boardState, move2Proof);
+                    await TicTacToeMove.move(bobSecret, Field(2), Field(2), move2Proof);
                 }).rejects.toThrow();
             });
         });
@@ -106,17 +121,26 @@ describe('tictactoe-move', () => {
 
     // Only valid board state transitions are allowed, part of a precommitted and public table
     describe('Moves', () => {
+        let baseProof: any,
+            move1Proof: any,
+            move2Proof: any;
+
         beforeEach(async () => {
-            // Makes the first move: Alice placing an O on the center square
+            baseProof = await TicTacToeMove.startGame(aliceGamerId, bobGamerId, gameId);
         });
 
-        it('Reverts when giving it a non-valid move', async () => {
-            // Bob overwriting Alice move and placing an X on the center square is not a valid move
-            expect(true).toEqual(false);
+        it('Reverts when given a non-valid move', async () => {
+            await expect(async () => {
+                await TicTacToeMove.move(aliceSecret, Field(3), Field(3), baseProof);
+            }).rejects.toThrow();
         });
 
-        it('Generates a move proof when given a valid move', async () => {
-            expect(true).toEqual(false);
+        it('Reverts when overwriting a move', async () => {
+            move1Proof = await TicTacToeMove.move(aliceSecret, Field(1), Field(1), baseProof);
+
+            await expect(async () => {
+                await TicTacToeMove.move(bobSecret, Field(1), Field(1), move1Proof);
+            }).rejects.toThrow();
         });
     });
 });
