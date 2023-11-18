@@ -86,11 +86,6 @@ describe('tictactoe', () => {
 
         zkApp = new TicTacToe(zkAppAddress);
 
-        await TicTacToeMove.compile()
-        console.log(TicTacToe.analyzeMethods())
-        await TicTacToe.compile()
-        console.log('here')
-
         const txn = await Mina.transaction(alice, () => {
             AccountUpdate.fundNewAccount(alice);
             zkApp.deploy();
@@ -143,8 +138,6 @@ describe('tictactoe', () => {
         it('Sets the `winnerGamerId` to be that of the winner of the game', async () => {
             const boardState = (new Board(Field(37455))).serialize();
             const lookupIndex = Field(stringifiedWinningBoards.indexOf(boardState.toString()));
-            console.log(stringifiedWinningBoards.indexOf(boardState.toString()))
-            console.log(lookupIndex)
 
             const publicOutput = new TicTacToePublicOutput(
                 {alicePlayerId, bobPlayerId, gameId, isTurnA: Bool(false), boardState}
@@ -188,8 +181,6 @@ describe('tictactoe', () => {
         it('Draws the game', async () => {
             const boardState = (new Board(Field(93183))).serialize();
             const lookupIndex = Field(stringifiedDrawBoards.indexOf(boardState.toString()));
-            console.log(stringifiedDrawBoards.indexOf(boardState.toString()))
-            console.log(lookupIndex)
 
             const publicOutput = new TicTacToePublicOutput(
                 {alicePlayerId, bobPlayerId, gameId, isTurnA: Bool(false), boardState}

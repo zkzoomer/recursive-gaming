@@ -189,7 +189,6 @@ export class TicTacToe extends SmartContract {
 	_verifyGameProof(
 		gameProof: TicTacToeMoveProof
 	) {
-
 		// Proof enconding the whole game was carried out correctly
 		gameProof.verify();
 
