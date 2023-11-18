@@ -1,6 +1,5 @@
 import { Cache, Field, Poseidon } from 'o1js';
 import { TicTacToeMove } from "./tictactoe-move";
-import { boardToField, emptyBoard } from './helpers';
 
 describe('tictactoe-move', () => {
     let gameId: Field,
@@ -9,13 +8,7 @@ describe('tictactoe-move', () => {
         alicePlayerId: Field,
         bobSecret: Field,
         bobGamerId: Field,
-        bobPlayerId: Field,
-        baseBoard: Field,
-        move1Board: Field,
-        move2Board: Field,
-        move3Board: Field,
-        invalidMove1Board: Field,
-        invalidMove2Board: Field;
+        bobPlayerId: Field;
 
     beforeAll(async () => {
         const cache: Cache = Cache.FileSystem('./cache')
@@ -34,18 +27,6 @@ describe('tictactoe-move', () => {
         // The player ID is specific to every game
         alicePlayerId = Poseidon.hash([aliceGamerId, gameId]);
         bobPlayerId = Poseidon.hash([bobGamerId, gameId]);
-
-        // The board will start on the empty state
-        baseBoard = boardToField(emptyBoard);
-
-        // Board states for each move
-        move1Board = boardToField([9, 9, 9, 9, 1, 9, 9, 9, 9]);
-        move2Board = boardToField([9, 9, 9, 2, 1, 9, 9, 9, 9]);
-        move3Board = boardToField([9, 9, 9, 2, 1, 9, 9, 9, 1]);
-
-        // Invalid board states--not part of the lookup table
-        invalidMove1Board = boardToField([9, 9, 9, 1, 1, 1, 9, 9, 9])
-        invalidMove2Board = boardToField([9, 9, 9, 9, 2, 9, 9, 9, 9]);
     });
 
     // Only valid turns are allowed: A -> B -> A -> B
