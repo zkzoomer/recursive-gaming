@@ -1,2 +1,2 @@
-export * from './generate-tictactoe-tables.js';
+export * from './generateLookupTables.js';
 export * from './utils.js';
