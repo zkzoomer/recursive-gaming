@@ -1,42 +1,42 @@
-import { Field } from "o1js";
-import { N, boardToField, boardTransition, boardTransitionToField, emptyBoard, isDrawState, isWinningState } from "./utils";
+import { Bool, Field } from "o1js";
+import { Board } from "./utils";
+
+const N = 9;
 
 export function generateTables() {
-    var stateTransitions: Field[] = [];
+    var winningBoards: Field[] = [];
+    var drawBoards: Field[] = [];
 
-    var winningStates: Field[] = [];
-
-    var drawStates: Field[] = [];
-
-    var startingBoards = [[...emptyBoard]]
+    // We start iterating on an empty board
+    var startingBoards = [(new Board(Field(0))).serialize()];
 
     for (var turn = 0; turn < 9; turn++) {
-        let endingBoards: number[][] = [];
+        let endingBoards: Field[] = [];
         let isTurnA = turn % 2 === 0;
 
-        for (var board of startingBoards) {
+        for (var _board of startingBoards) {
             for (var i = 0; i < N; i++) {
-                var startBoard = [...board];
+                const board = new Board(_board);
 
-                // If the start board is a winning board, no new move is possible
-                if (isWinningState(startBoard, !isTurnA)) continue
+                if (board.checkWin()) continue;
+
+                try {
+                    board.update(Field(i % 3), Field(Math.floor(i/3)), Bool(isTurnA));
+                } catch (err) {
+                    continue;
+                };
 
                 // Add new board to list for next iteration
-                const endingBoard = boardTransition(startBoard, isTurnA, i);
-                if (!endingBoard) continue;
-                endingBoards.push(endingBoard);
-
-                // Add the validated state transition
-                stateTransitions.push(boardTransitionToField(startBoard, endingBoard));
+                endingBoards.push(board.serialize());
 
                 // Add to winning states if it is a winning board
-                if (isWinningState(endingBoard, isTurnA) && !winningStates.includes(boardToField(endingBoard))) {
-                    winningStates.push(boardToField(endingBoard));
+                if (board.checkWin() && !winningBoards.includes(board.serialize())) {
+                    winningBoards.push(board.serialize());
                 };
 
                 // Add to draw states if it is a draw board
-                if (isDrawState(endingBoard) && !drawStates.includes(boardToField(endingBoard))) {
-                    drawStates.push(boardToField(endingBoard));
+                if (board.checkDraw() && !drawBoards.includes(board.serialize())) {
+                    drawBoards.push(board.serialize());
                 };
             };
         };
@@ -45,8 +45,7 @@ export function generateTables() {
     };  
 
     return { 
-        stateTransitions,
-        winningStates,
-        drawStates,
+        winningBoards,
+        drawBoards,
     };
 };
