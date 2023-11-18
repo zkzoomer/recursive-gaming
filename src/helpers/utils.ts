@@ -4,15 +4,15 @@ function Optional<T>(type: Provable<T>) {
     return class Optional_ extends Struct({ isSome: Bool, value: type }) {
         constructor(isSome: boolean | Bool, value: T) {
             super({ isSome: Bool(isSome), value });
-        }
+        };
     
         toFields() {
             return Optional_.toFields(this);
-        }
+        };
     };
 };
   
-class OptionalBool extends Optional(Bool) {}
+class OptionalBool extends Optional(Bool) {};
 
 export class Board {
     board: OptionalBool[][];
@@ -34,7 +34,7 @@ export class Board {
         };
 
         this.board = board;
-    }
+    };
   
     serialize(): Field {
         let isPlayed = [];
@@ -97,7 +97,7 @@ export class Board {
             row = row.and(this.board[i][0].value.equals(this.board[i][1].value));
             row = row.and(this.board[i][1].value.equals(this.board[i][2].value));
             won = won.or(row);
-        }
+        };
     
         // check cols
         for (let i = 0; i < 3; i++) {
@@ -107,7 +107,7 @@ export class Board {
             col = col.and(this.board[0][i].value.equals(this.board[1][i].value));
             col = col.and(this.board[1][i].value.equals(this.board[2][i].value));
             won = won.or(col);
-        }
+        };
     
         // check diagonals
         let diag1 = this.board[0][0].isSome;
@@ -124,7 +124,6 @@ export class Board {
         diag2 = diag2.and(this.board[1][1].value.equals(this.board[2][0].value));
         won = won.or(diag2);
     
-        //
         return won;
     };
 
