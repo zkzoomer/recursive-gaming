@@ -76,7 +76,7 @@ export class Board {
                 let token = '_';
 
                 if (this.board[i][j].isSome.toBoolean()) {
-                    token = this.board[i][j].value.toBoolean() ? 'X' : 'O';
+                    token = this.board[i][j].value.toBoolean() ? 'O' : 'X';
                 };
         
                 row += token + ' | ';
