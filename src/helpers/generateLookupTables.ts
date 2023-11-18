@@ -121,6 +121,8 @@ export function generateTables() {
 
     return { 
         winningBoards,
+        stringifiedWinningBoards,
         drawBoards,
+        stringifiedDrawBoards
     };
 };
