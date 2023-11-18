@@ -48,17 +48,34 @@ export class TicTacToe extends SmartContract {
 		this.gameOngoing.set(Bool(true));
     };
 
-    @method winFinish(secret: Field, gameProof: TicTacToeMoveProof) {
+    @method winFinish(gameProof: TicTacToeMoveProof, winnerGamerId: Field) {
 		// Proof enconding the whole game was carried out correctly
       	gameProof.verify();
 
-		// Enforce that the caller is the proposed winner
-		// compute w secret n shit
+		// Public outputs for the proof match with the onchain game
+		let alicePlayerId = this.alicePlayerId.getAndAssertEquals();
+		alicePlayerId.assertEquals(gameProof.publicOutput.alicePlayerId);
+		let bobPlayerId = this.bobPlayerId.getAndAssertEquals();
+		bobPlayerId.assertEquals(gameProof.publicOutput.bobPlayerId);
+		let gameId = this.gameId.getAndAssertEquals();
+		gameId.assertEquals(gameProof.publicOutput.gameId);
 
-		// Check that the `newBoardState` is in the lookup table of winning states
+		// New board state is in the list of winning positions
+		// TODO -- enforce via lookup
+		
+		// Getting the winner player ID from the verified last move proof
+		// proofWinnerPlayerId === bobPlayerId + proofWinner * (alicePlayerId - bobPlayerId)
+		let proofWinner = gameProof.publicOutput.isTurnA.not();  // The winner made the last move
+		let proofWinnerPlayerId = bobPlayerId.add(proofWinner.toField().mul(alicePlayerId.sub(bobPlayerId)));
 
-		// Set the winner to the corresponding Id
+		// The given gamer ID for the winner must match the one corresponding to the last move proof
+		proofWinnerPlayerId.assertEquals(Poseidon.hash([winnerGamerId, gameId]))
 
+		// Sets the winner to the validated gamer ID
+		this.winnerGamerId.set(winnerGamerId);
+
+		// Ends the game
+		this.gameOngoing.set(Bool(false));
     };
 
     @method proposeDraw(secret: Field) {
@@ -79,10 +96,6 @@ export class TicTacToe extends SmartContract {
 		// Requires both parties to have preagreed to a draw
 		this.aliceDrawProposal.getAndAssertEquals().assertTrue();
 		this.bobDrawProposal.getAndAssertEquals().assertTrue();
-
-		// Resets draw proposals back to false
-		this.aliceDrawProposal.set(Bool(false));
-		this.bobDrawProposal.set(Bool(false));
 
 		// Effectively restarts the game again
 		this.gameOngoing.set(Bool(false));
@@ -117,6 +130,11 @@ export class TicTacToe extends SmartContract {
     @method endGame() {
 		// Game must have already ended
 		this.gameOngoing.assertEquals(Bool(false));
+
+		// Sets draw proposals back to false
+		this.aliceDrawProposal.set(Bool(false));
+		this.bobDrawProposal.set(Bool(false));
+
 		// Sets the winner back to the default value
 		this.winnerGamerId.set(Field(0));
     };
