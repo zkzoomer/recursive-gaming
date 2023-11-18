@@ -106,6 +106,17 @@ describe('tictactoe-move', () => {
 
     // Only valid board state transitions are allowed, part of a precommitted and public table
     describe('Moves', () => {
+        beforeEach(async () => {
+            // Makes the first move: Alice placing an O on the center square
+        });
 
+        it('Reverts when giving it a non-valid move', async () => {
+            // Bob overwriting Alice move and placing an X on the center square is not a valid move
+            expect(true).toEqual(false);
+        });
+
+        it('Generates a move proof when given a valid move', async () => {
+            expect(true).toEqual(false);
+        });
     });
 });
