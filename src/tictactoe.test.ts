@@ -209,11 +209,6 @@ describe('tictactoe', () => {
 
             await txn.prove();
             await txn.sign([aliceKey]).send();
-            
-            const aliceDrawProposal = zkApp.aliceDrawProposal.get();
-            expect(aliceDrawProposal).toEqual(Bool(false));
-            const bobDrawProposal = zkApp.bobDrawProposal.get();
-            expect(bobDrawProposal).toEqual(Bool(false));
 
             const gameOngoing = zkApp.gameOngoing.get();
             expect(gameOngoing).toEqual(Bool(false));
@@ -298,6 +293,17 @@ describe('tictactoe', () => {
 
             const winnerGamerId = zkApp.winnerGamerId.get();
             expect(winnerGamerId).toEqual(Field(0));
+        });
+
+        it('Sets draw proposals back to false', async () => {
+            await resign(aliceSecret, bobGamerId);
+
+            await endGame();
+
+            const aliceDrawProposal = zkApp.aliceDrawProposal.get();
+            expect(aliceDrawProposal).toEqual(Bool(false));
+            const bobDrawProposal = zkApp.bobDrawProposal.get();
+            expect(bobDrawProposal).toEqual(Bool(false));
         });
 
         it('Allows a new game to be started after calling', async () => {
