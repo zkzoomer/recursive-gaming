@@ -1,4 +1,4 @@
-import { Bool, Field, Poseidon, Provable, SelfProof, Struct, ZkProgram } from 'o1js';
+import { Bool, Field, Provable, Struct } from 'o1js';
 
 function Optional<T>(type: Provable<T>) {
     return class Optional_ extends Struct({ isSome: Bool, value: type }) {
