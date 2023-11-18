@@ -73,7 +73,7 @@ describe('tictactoe', () => {
     });
 
     beforeEach(async () => {
-        let Local = Mina.LocalBlockchain({ proofsEnabled: true });
+        let Local = Mina.LocalBlockchain({ proofsEnabled: false });
         Mina.setActiveInstance(Local);
 
         [
