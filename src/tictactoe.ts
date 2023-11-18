@@ -1,5 +1,6 @@
-import { method, state, Bool, Field, Poseidon, SmartContract, State } from 'o1js';
-import { TicTacToeMoveProof } from './tictactoe-move';
+import { method, state, Bool, Field, Gates, Poseidon, Provable, SmartContract, State } from 'o1js';
+import { TicTacToeMoveProof } from './tictactoeMove';
+import { generateTables } from './helpers';
 
 export class TicTacToe extends SmartContract {
     // Starts as false, set to true when there is a game ongoing
@@ -18,6 +19,9 @@ export class TicTacToe extends SmartContract {
     // The gamer ID for the winning player
     @state(Field) winnerGamerId = State<Field>();
 
+	winningBoards: Field[];
+	drawBoards: Field[];
+
     init() {
 		super.init();
 		// Set the game to be playeable
@@ -26,6 +30,19 @@ export class TicTacToe extends SmartContract {
 		this.gameId.set(Field(0));
 		// Set no winner for the game--makes the game playeable from the start
 		this.winnerGamerId.set(Field(0));
+
+		// Define lookup tables for win and draw states
+		({ winningBoards: this.winningBoards, drawBoards: this.drawBoards } = generateTables());
+
+		let winningBoardsIndices = Array.from({length: this.winningBoards.length}, (_, i) => Field(i));
+		let drawBoardsIndices = Array.from({length: this.drawBoards.length}, (_, i) => Field(i));
+
+		if(Provable.inProver()) {
+			// Lookup table containing all possible win states
+			Gates.addFixedLookupTable(1, winningBoardsIndices, this.winningBoards);
+			// Lookup table containing all possible draw states
+			Gates.addFixedLookupTable(1, drawBoardsIndices, this.drawBoards);
+		};
     };
   
     @method startGame(
@@ -49,19 +66,12 @@ export class TicTacToe extends SmartContract {
     };
 
     @method winFinish(gameProof: TicTacToeMoveProof, winnerGamerId: Field) {
-		// Proof enconding the whole game was carried out correctly
-      	gameProof.verify();
-
-		// Public outputs for the proof match with the onchain game
-		let alicePlayerId = this.alicePlayerId.getAndAssertEquals();
-		alicePlayerId.assertEquals(gameProof.publicOutput.alicePlayerId);
-		let bobPlayerId = this.bobPlayerId.getAndAssertEquals();
-		bobPlayerId.assertEquals(gameProof.publicOutput.bobPlayerId);
-		let gameId = this.gameId.getAndAssertEquals();
-		gameId.assertEquals(gameProof.publicOutput.gameId);
+		// Verify the game proof corresponds to the defined onchain game
+		let { alicePlayerId, bobPlayerId, gameId } = this._verifyGameProof(gameProof);
 
 		// New board state is in the list of winning positions
-		// TODO -- enforce via lookup
+		let index = this.winningBoards.findIndex(gameProof.publicOutput.boardState as any);
+		Gates.lookup(Field(1), Field(index), gameProof.publicOutput.boardState);
 		
 		// Getting the winner player ID from the verified last move proof
 		// proofWinnerPlayerId === bobPlayerId + proofWinner * (alicePlayerId - bobPlayerId)
@@ -77,6 +87,18 @@ export class TicTacToe extends SmartContract {
 		// Ends the game
 		this.gameOngoing.set(Bool(false));
     };
+
+	@method drawFinish(gameProof: TicTacToeMoveProof) {
+		// Verify the game proof corresponds to the defined onchain game
+		this._verifyGameProof(gameProof);
+
+		// New board state is in the list of draw positions
+		let index = this.drawBoards.findIndex(gameProof.publicOutput.boardState as any);
+		Gates.lookup(Field(1), Field(index), gameProof.publicOutput.boardState);
+
+		// Ends the game--can immediately be restarted
+		this.gameOngoing.set(Bool(false));
+	};
 
     @method proposeDraw(secret: Field) {
 		// Gets the Player ID for the given `secret` and the current `gameId`
@@ -162,4 +184,23 @@ export class TicTacToe extends SmartContract {
 		// Returns the player who called the function: 1 if it was Alice, 0 if it was Bob
 		return isAlicePlayerId;
     };
+
+	// Verifies that the game proof corresponds to the defined onchain game
+	_verifyGameProof(
+		gameProof: TicTacToeMoveProof
+	) {
+
+		// Proof enconding the whole game was carried out correctly
+		gameProof.verify();
+
+		// Public outputs for the proof match with the onchain game
+		let alicePlayerId = this.alicePlayerId.getAndAssertEquals();
+		alicePlayerId.assertEquals(gameProof.publicOutput.alicePlayerId);
+		let bobPlayerId = this.bobPlayerId.getAndAssertEquals();
+		bobPlayerId.assertEquals(gameProof.publicOutput.bobPlayerId);
+		let gameId = this.gameId.getAndAssertEquals();
+		gameId.assertEquals(gameProof.publicOutput.gameId);
+
+		return { alicePlayerId, bobPlayerId, gameId };
+	};
 };
