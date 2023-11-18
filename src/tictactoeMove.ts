@@ -1,7 +1,7 @@
 import { Bool, Field, Poseidon, Provable, SelfProof, Struct, ZkProgram } from 'o1js';
 import { Board } from './helpers';
 
-class TicTacToePublicOutput extends Struct({
+export class TicTacToePublicOutput extends Struct({
     alicePlayerId: Field,
     bobPlayerId: Field,
     gameId: Field,        
